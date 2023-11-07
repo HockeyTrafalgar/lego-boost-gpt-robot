@@ -198,16 +198,17 @@ export class HubAsync extends Hub {
    * rotation is counterclockwise.
    * @param {boolean} [wait=false] will promise wait unitll motorAngle has turned
    * @returns {Promise}
-   */
+   */ 
   motorAngleMultiAsync(angle: number, dutyCycleA: number = 100, dutyCycleB: number = 100, wait: boolean = false): Promise<any> {
     return new Promise((resolve, _) => {
       this.motorAngleMulti(angle, dutyCycleA, dutyCycleB, async () => {
         if (wait) {
           let beforeTurn;
+
           do {
-            beforeTurn = this.portData['AB'].angle;
-            await new Promise(res => setTimeout(res, CALLBACK_TIMEOUT_MS));
-          } while (this.portData['AB'].angle !== beforeTurn);
+            beforeTurn = this.portData['A'].angle;            
+            await new Promise(res => setTimeout(res, CALLBACK_TIMEOUT_MS));            
+          } while (this.portData['A'].angle !== beforeTurn);
           resolve();
         } else {
           setTimeout(resolve, CALLBACK_TIMEOUT_MS);
@@ -263,7 +264,7 @@ export class HubAsync extends Hub {
   /**
    * Turn robot specified degrees
    * @method Hub#turn
-   * @param {number} degrees degrees to turn. Negative is to the left and positive to the right.
+   * @param {number} degrees degrees to3. Negative is to the left and positive to the right.
    * @param {boolean} [wait=true] will promise wait untill the turn has completed.
    * @returns {Promise}
    */

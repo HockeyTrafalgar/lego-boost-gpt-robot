@@ -367,7 +367,7 @@ var Hub = /** @class */ (function () {
                 _this.subscribe(parseInt(port, 10), 2);
             }
             else {
-                _this.logDebug("Port subscribtion not sent: " + port);
+                _this.logDebug("Port subscribtion not sent: ".concat(port));
             }
         });
     };
@@ -410,7 +410,7 @@ var Hub = /** @class */ (function () {
         })
             .catch(function (err) {
             _this.isWriting = false;
-            _this.log("Error while writing: " + el.data + " - Error " + err.toString());
+            _this.log("Error while writing: ".concat(el.data, " - Error ").concat(err.toString()));
             // TODO: Notify of failure
         })
             .finally(function () {

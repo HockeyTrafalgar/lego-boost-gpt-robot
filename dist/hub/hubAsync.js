@@ -3,10 +3,12 @@ var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -266,13 +268,13 @@ var HubAsync = /** @class */ (function (_super) {
                             beforeTurn = void 0;
                             _a.label = 1;
                         case 1:
-                            beforeTurn = this.portData['AB'].angle;
+                            beforeTurn = this.portData['A'].angle;
                             return [4 /*yield*/, new Promise(function (res) { return setTimeout(res, CALLBACK_TIMEOUT_MS); })];
                         case 2:
                             _a.sent();
                             _a.label = 3;
                         case 3:
-                            if (this.portData['AB'].angle !== beforeTurn) return [3 /*break*/, 1];
+                            if (this.portData['A'].angle !== beforeTurn) return [3 /*break*/, 1];
                             _a.label = 4;
                         case 4:
                             resolve();
@@ -327,7 +329,7 @@ var HubAsync = /** @class */ (function (_super) {
     /**
      * Turn robot specified degrees
      * @method Hub#turn
-     * @param {number} degrees degrees to turn. Negative is to the left and positive to the right.
+     * @param {number} degrees degrees to3. Negative is to the left and positive to the right.
      * @param {boolean} [wait=true] will promise wait untill the turn has completed.
      * @returns {Promise}
      */

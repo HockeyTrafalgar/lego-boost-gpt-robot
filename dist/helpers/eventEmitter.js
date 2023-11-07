@@ -1,11 +1,13 @@
 "use strict";
 // https://gist.github.com/mudge/5830382#gistcomment-2658721
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventEmitter = void 0;
@@ -43,7 +45,7 @@ var EventEmitter = /** @class */ (function () {
         if (typeof this.events[event] !== 'object') {
             return;
         }
-        __spreadArrays(this.events[event]).forEach(function (listener) { return listener.apply(_this, args); });
+        __spreadArray([], this.events[event], true).forEach(function (listener) { return listener.apply(_this, args); });
     };
     EventEmitter.prototype.once = function (event, listener) {
         var _this = this;
