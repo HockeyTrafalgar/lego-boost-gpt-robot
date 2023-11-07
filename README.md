@@ -1,34 +1,26 @@
-# Lego Boost in Browser
+# A toy robot for having fun with kids
 
-Control Lego Boost from the browser without any installations.
+Runs in browser with no backend. Requires OpenAI key (stored locally).  Needs HTTPS to work properly.
 
 ## Web Bluetooth API
 
 Application uses [Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API) to communicate with Lego Boost.
 
-Web Bluetooth API works with **Windows, Mac, Linux** and **Android** devices with **Chrome** and **Opera** browsers. Unfortunately Apple iOS doesn't support Web Bluetooth.
+Bluetooth is not supported in Chrome or Safari on iOS, install WebBLE browser to run it on iPhones. On Android/Desktops it runs just fine.
 
 [Supported devices](https://github.com/WebBluetoothCG/web-bluetooth/blob/master/implementation-status.md)
 
-## Start
+## To rebuild the Lego BOOS Bluetooth connect library, run:
 
 ```sh
 $ npm run build:browser
 ```
-
-Open `index.html` from the root
 
 ## Build distributable
 
 ```sh
 $ npm run build
 ```
-
-## Example Application
-
-React Application for controlling Lego Boost from the browser with Web Bluetooth API
-
-[Lego Boost App](https://github.com/ttu/lego-boost-app)
 
 ## Credits
 
