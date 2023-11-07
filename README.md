@@ -10,7 +10,7 @@ Bluetooth is not supported in Chrome or Safari on iOS, install WebBLE browser to
 
 [Supported devices](https://github.com/WebBluetoothCG/web-bluetooth/blob/master/implementation-status.md)
 
-## To rebuild the Lego BOOS Bluetooth connect library, run:
+## To rebuild the Lego BOOST Bluetooth connect library, run:
 
 ```sh
 $ npm run build:browser
