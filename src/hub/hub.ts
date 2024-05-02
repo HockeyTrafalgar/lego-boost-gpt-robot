@@ -34,7 +34,7 @@ export class Hub {
   num2action: { [key: number]: string };
   num2color: { [key: number]: string };
   ledColors: LedColor[];
-  portInfoTimeout: number;
+  portInfoTimeout: any;
   noReconnect: boolean;
   connected: boolean;
   rssi: number;

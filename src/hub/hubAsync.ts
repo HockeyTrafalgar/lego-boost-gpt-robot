@@ -180,7 +180,7 @@ export class HubAsync extends Hub {
             beforeTurn = this.portData[port].angle;
             await new Promise(res => setTimeout(res, CALLBACK_TIMEOUT_MS));
           } while (this.portData[port].angle !== beforeTurn);
-          resolve();
+          resolve(null);
         } else {
           setTimeout(resolve, CALLBACK_TIMEOUT_MS);
         }
@@ -209,7 +209,7 @@ export class HubAsync extends Hub {
             beforeTurn = this.portData['A'].angle;            
             await new Promise(res => setTimeout(res, CALLBACK_TIMEOUT_MS));            
           } while (this.portData['A'].angle !== beforeTurn);
-          resolve();
+          resolve(null);
         } else {
           setTimeout(resolve, CALLBACK_TIMEOUT_MS);
         }

@@ -1,0 +1,761 @@
+<html>
+<head>
+<meta charset="UTF-8">    
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js"></script>
+
+<script src="./dist/bundle.js"></script>
+
+<style>
+	* {
+		color: white;
+		font-family: monospace;
+		font-size: 16pt;
+	}
+
+	body {
+		-webkit-user-select: none;  /* Safari */
+		-moz-user-select: none;     /* Firefox */
+		-ms-user-select: none;      /* IE/Edge */
+		user-select: none;          /* Standard syntax */
+	}
+
+
+	#face{
+	font-size: 150px;
+	}
+
+	#saying{
+		margin-top:20px;
+	}
+
+
+	#speech{
+	text-align: center;
+	}
+
+	#menu{
+		position: absolute;
+		top:0;
+		left: 0;
+		z-index: 20;
+	}
+	
+
+	#openAIKey{
+		background-color: #333;
+		border: solid 1px #777;
+		width: 300px;
+	}
+
+	body, html {
+		height: 100%;
+		margin: 0;
+		font-family: Arial, sans-serif;
+	}
+
+	.centered-container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 100%;
+		width: 100%;
+		position: absolute;
+		top:0;
+		left: 0;
+		z-index: 1;
+	}
+
+	.centered-content {
+		text-align: center;
+		
+	}
+
+	#canvas{
+		position: fixed;
+		bottom:10px;
+		right: 10px;
+		width: 100px;
+		height:100px;
+		border-radius: 100px;
+	}
+
+</style>   
+
+</head>
+
+<body bgcolor="black">
+
+<div id="menu">
+			
+	
+	OpenAI&nbsp;key:&nbsp;<input id="openAIKey"> <br>
+	<a href="#" onclick="start()">Start</a> <br>	
+	<a href="#" onclick="fullscreen(true);" style="color: white">Fullscreen</a> <br>
+	<div id="status" style="display: inline;"></div> <br>	
+
+</div>
+
+<canvas id="canvas"></canvas>
+<div id="speech"></div>
+
+<div class="centered-container">
+	<div class="centered-content">
+		<div id="face"></div>
+		<div id="saying"><a href="#" onclick="start();">START</a></div>
+	</div>
+	
+</div>
+	
+
+<script>
+
+function fullscreen(f){
+	if (f) {
+			$('#menu').hide();
+
+			if (document.documentElement.requestFullscreen) {
+				document.documentElement.requestFullscreen();
+			} else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
+				document.documentElement.mozRequestFullScreen();
+			} else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+				document.documentElement.webkitRequestFullscreen();
+			} else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
+				document.documentElement.msRequestFullscreen();
+			}
+
+		} else {
+			$('#menu').show();
+
+			if (document.exitFullscreen) {
+				document.exitFullscreen();
+			} else if (document.webkitExitFullscreen) {   // Chrome, Safari (and Opera 15+)
+				document.webkitExitFullscreen();
+			} else if (document.mozCancelFullScreen) {    // Firefox
+				document.mozCancelFullScreen();
+			} else if (document.msExitFullscreen) {       // IE11+
+				document.msExitFullscreen();
+			}	
+		}
+}
+
+var apiKey = "";
+
+$(document).ready(function() { 
+
+
+
+	displayEmoji("1f44b");
+
+	$("#openAIKey").val(localStorage.getItem('openAIKey'));
+
+	$("#openAIKey").on("change", function() {
+		localStorage.setItem('openAIKey', $("#openAIKey").val());
+		 apiKey = $("#openAIKey").val();
+	});
+
+	apiKey = $("#openAIKey").val();
+
+	if (!navigator.bluetooth)
+		document.getElementById("status").innerHTML = "Bluetooth not supported in this browser"
+
+
+	// Go fullscreen on doubleclick
+	$('body').dblclick(function() {
+			
+		if ($('#menu').is(':visible')) {
+			fullscreen(true);
+
+		} else {
+			fullscreen(false);	
+		}
+		
+	});
+
+	// Driving robot with WASD keys
+	$(document).keydown(function(e) {
+		switch(e.which) {
+			case 87: // W key
+			case "w":	
+					controls.w=true;
+				break;
+			case 65: // A key
+			case "a":
+					controls.a=true;
+				break;
+			case 83: // S key
+			case "s":
+					controls.s=true;
+				break;
+			case 68: // D key		                
+			case "d":
+					controls.d=true;
+				break;
+
+			default: return; // exit this handler for other keys
+		}
+		
+		checkIfControlsUpdated();
+
+		e.preventDefault(); // prevent the default action (scroll / move caret)
+	});
+
+	$(document).keyup(function(e) {
+		switch(e.which) {
+			case 87: // W key
+			case "w":
+					controls.w=false;
+				break;
+			case 65: // A key
+			case "a":
+					controls.a=false;
+				break;
+			case 83: // S key
+			case "s":
+					controls.s=false;
+				break; 
+			case 68: // D key
+			case "d":
+					controls.d=false;
+				break;
+			default: return; // exit this handler for other keys
+		}
+
+		checkIfControlsUpdated();
+
+		e.preventDefault(); // prevent the default action (scroll / move caret)
+	});
+	
+});
+
+
+
+
+
+
+// MOTION
+
+var turnRate = 0.8;
+var spinSpeed = 15;
+
+
+var controls = {
+	w: false,
+	s: false,
+	a: false,
+	d: false,
+	driveSpeed: 50
+};
+
+async function start(){
+	setTimeout(startVideoCapture, 1000);
+
+	var configuration = {};
+
+	configuration.leftMotor = "A";
+	configuration.rightMotor = "B"
+	configuration.distanceModifier = 37;
+	configuration.turnModifier = 3.2;
+	configuration.driveSpeed = 50; 
+	configuration.turnSpeed = 20;
+	configuration.defaultStopDistance = 130;
+	configuration.defaultClearDistance = 180;
+
+	await say("Starting!");
+
+
+	//return;
+
+	boost.connect(configuration).then(
+		async function(){
+			if (boost.deviceInfo.connected){
+				console.log("Connected!");
+	
+				displayStatus();
+				say("I'm ready!");
+				displayEmoji("1f609");
+
+				await boost.motorTimeMultiAsync(0.2,20,-20);
+				await boost.motorTimeMultiAsync(0.2,-20,20);
+				await boost.led("green");
+			}
+		}
+	);
+
+	//chatGPT('Tell me a random fun fact, try to be creative');
+
+
+}
+
+var controlsBefore;
+
+function checkIfControlsUpdated(){
+	if (controlsBefore != JSON.stringify(controls)){
+		if (controls.w){
+			if (controls.a){
+				//left
+				boost.motorTimeMultiAsync(60,controls.driveSpeed*turnRate,controls.driveSpeed);
+			}else if(controls.d){
+				//right
+				boost.motorTimeMultiAsync(60,controls.driveSpeed,controls.driveSpeed*turnRate);
+			}else{
+				//forward 
+				boost.motorTimeMultiAsync(60,controls.driveSpeed,controls.driveSpeed);
+			}
+
+		}else if (controls.s){
+			if (controls.a){
+				//left back
+				boost.motorTimeMultiAsync(60,-controls.driveSpeed*turnRate,-controls.driveSpeed);
+			}else if(controls.d){
+				//right back
+				boost.motorTimeMultiAsync(60,-controls.driveSpeed,-controls.driveSpeed*turnRate);
+			}else{
+				//back 
+				boost.motorTimeMultiAsync(60,-controls.driveSpeed,-controls.driveSpeed);
+			}
+		}else if (controls.a){
+			//left spin
+			boost.motorTimeMultiAsync(60,0,spinSpeed);
+		}else if(controls.d){
+			//right spin
+			boost.motorTimeMultiAsync(60,spinSpeed,0);
+		}else{
+			//back 
+			console.log("stop");
+			boost.stop();
+		} 
+
+		controlsBefore = JSON.stringify(controls);
+	}
+}
+
+
+
+
+// VISION
+
+let videoStream = null;
+let videoElement = null;
+let canvasElement = document.getElementById('canvas');
+let canvasContext = canvasElement.getContext('2d');
+
+// This function starts video capture and displays the video in a canvas element.
+async function startVideoCapture() {
+	try {
+		// Reset the canvas to 256x256 pixels.
+		canvasElement.width = 256;
+		canvasElement.height = 256;
+
+		// Request access to the media devices and get the video stream.
+		videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+		videoElement = document.createElement('video');
+		videoElement.srcObject = videoStream;
+		videoElement.play();
+
+		// Draw the video frame to the canvas when it's playing.
+		videoElement.addEventListener('playing', () => {
+			drawVideoToCanvas();
+		});
+	} catch (error) {
+		console.error('Error accessing the camera', error);
+	}
+}
+
+// This function continuously draws the video to the canvas, cropping it to be square.
+function drawVideoToCanvas() {
+	const aspectRatio = videoElement.videoWidth / videoElement.videoHeight;
+	let videoHeight = videoElement.videoHeight;
+	let videoWidth = videoElement.videoWidth;
+
+	// Calculate the size to crop the video to make it square.
+	if (aspectRatio > 1) {
+		videoWidth = videoHeight; // landscape
+	} else {
+		videoHeight = videoWidth; // portrait
+	}
+
+	const startX = (videoElement.videoWidth - videoWidth) / 2;
+	const startY = (videoElement.videoHeight - videoHeight) / 2;
+
+	// Draw the video frame to the canvas, cropping it to square.
+	canvasContext.drawImage(videoElement, startX, startY, videoWidth, videoHeight, 0, 0, canvasElement.width, canvasElement.height);
+
+	// Keep drawing frames to the canvas.
+	requestAnimationFrame(drawVideoToCanvas);
+}
+
+// This function gets the current video frame from the canvas as a Base64-encoded JPEG.
+function getCameraImageBase64() {
+// Convert the current canvas frame to a data URL (base64).
+	return canvasElement.toDataURL('image/jpeg');
+}
+
+async function lookAtTheCamera(){
+	chatGPT("",true);
+}
+
+
+
+
+
+
+// HEARING
+
+// https://wiki.vad.ricky0123.com/en/docs/user/browser
+const myvad = vad.MicVAD.new({
+	onSpeechEnd: (audio) => {
+		// do something with `audio` (Float32Array of audio samples at sample rate 16000)...
+		//console.log("Speech ended: ",audio);
+		var blob = float32ArrayToWavBlob(audio,16000);
+		sendAudioToWhisper(blob);
+	},
+	redemptionFrames: 20
+}).then((vad) => {
+	// Start the VAD
+	vad.start()
+});
+
+function float32ArrayToWavBlob(float32Array, sampleRate) {
+	// Create a buffer for the WAV file with headers + audio data
+	const buffer = new ArrayBuffer(44 + float32Array.length * 2);
+	const view = new DataView(buffer);
+
+	// Write WAV header to buffer
+	function writeString(view, offset, string) {
+		for (let i = 0; i < string.length; i++) {
+			view.setUint8(offset + i, string.charCodeAt(i));
+		}
+	}
+	// RIFF header
+	writeString(view, 0, 'RIFF');
+	view.setUint32(4, 36 + float32Array.length * 2, true);
+	writeString(view, 8, 'WAVE');
+	// fmt subchunk
+	writeString(view, 12, 'fmt ');
+	view.setUint32(16, 16, true); // subchunk1Size
+	view.setUint16(20, 1, true); // audioFormat (1 = PCM)
+	view.setUint16(22, 1, true); // numChannels
+	view.setUint32(24, sampleRate, true); // sampleRate
+	view.setUint32(28, sampleRate * 2, true); // byteRate (sampleRate * numChannels * bytesPerSample)
+	view.setUint16(32, 2, true); // blockAlign (numChannels * bytesPerSample)
+	view.setUint16(34, 16, true); // bitsPerSample
+	// data subchunk
+	writeString(view, 36, 'data');
+	view.setUint32(40, float32Array.length * 2, true);
+
+	// Write PCM audio data
+	for (let i = 0; i < float32Array.length; i++) {
+		const index = 44 + i * 2;
+		const value = Math.max(-1, Math.min(1, float32Array[i])); // clamp
+		view.setInt16(index, value < 0 ? value * 0x8000 : value * 0x7FFF, true);
+	}
+
+	return new Blob([view], { type: 'audio/wav' });
+}
+
+async function sendAudioToWhisper(audioBlob) {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.wav');
+    formData.append('model', 'whisper-1');  // Specify the model parameter here
+	formData.append('response_format', 'verbose_json'); 
+	formData.append('temperature', '0'); 
+	formData.append('prompt', ''); 
+	formData.append('language', 'en'); 
+
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                //'Content-Type': 'multipart/form-data'
+            },
+            body: formData
+        });
+        const result = await response.json();
+        console.log('Whisper Transcription:', result);
+
+		if (result.segments.length > 0 && result.text && result.text.length > 0) {
+            if(result.segments[0].no_speech_prob > 0.5){
+                console.log('No speech detected');
+                
+            }else{
+                
+				p = Math.exp(result.segments[0].avg_logprob);
+				console.log(result.text,p);
+
+				if (p> 0.45){
+					chatGPT(result.text);
+				}else{
+					$("#speech").html(result.text+` (p=${p})` );
+					say("Didn't get that");
+				}
+            }
+        }
+
+		
+    } catch (error) {
+        console.error('Error sending audio to Whisper:', error);
+    }
+}
+
+
+
+
+
+
+// SPEECH
+
+var audio = new Audio();
+
+async function say(text) {
+    console.log("Saying: ", text);
+    $("#saying").html(text);
+
+    var formData = JSON.stringify({
+        'model': 'tts-1',
+        'voice': 'onyx',
+        'input': text
+    });
+    try {
+        const openaiTTSResponse = await $.ajax({
+            url: 'https://api.openai.com/v1/audio/speech',
+            method: 'POST',
+            xhrFields: {
+                responseType: "arraybuffer"
+            },
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            data: formData
+        });
+        
+        var blob = new Blob([openaiTTSResponse]);
+        if (blob) {
+            var blobURL = URL.createObjectURL(blob);
+            
+            return new Promise((resolve, reject) => {
+                
+                audio.src = blobURL;
+                audio.onended = () => {
+                    console.log("Audio playback finished.");
+                    resolve();  // Resolves the promise when audio ends, allowing the async function to proceed
+                };
+                audio.onerror = (e) => {
+                    console.error("Error playing audio:", e);
+                    reject(e);  // Rejects the promise if there is an error
+                };
+                audio.play();
+            });
+        }
+    } catch (error) {
+        console.error('Error TTS:', error);
+    }
+}
+
+
+
+
+
+
+
+// BRAINS
+
+var robotSystemText = `You are a friendly robot companion for kids designed to play with them, tell fun facts, tell stories, jokes and play games. You can use JavaScrpt to control your movements. You have 2 wheels (left and right), a front screen instead of a face that can display a single Emoji, and a text-to-speech module. When processing commands, you need to produce a clean piece of JavaScript code without any extra text that includes series of operations for your robot wheels, display and speech.  
+
+# HOW TO PLAY HIDE AND SEEK
+- You need to look around until you see a person
+- First, count to 3
+- Then move around
+- Took at the camera to see if you found someone
+- You have 10 attempts
+
+Here is the list of functions available to you:
+
+/* Display emoji on the screen
+Args:
+e -  Emoji code to display, in lowercase letter, for example "1f609"
+*/
+async function displayEmoji(e); 
+
+/* Turns the robot around its axis for specified number of degrees. Positive number turns right, negative turns left */
+async function boost.turn(degrees);
+
+/* Drives robot for specified distance in centimeters. Positive moves forward, negative move backwards */
+async function boost.drive(distance);
+
+/* Stops all motors */
+function boost.stop();
+
+/* Say the phrase using text-to-speech
+phrase - line to say. Make sure the content here is suitable for 7-year old kids.
+*/
+async function say(phrase)
+
+/* Use this function to see what is going on around. This function does not return anything, it will end the current set of instructions, provide you with an image as a message from user and wait for your further instructions. You can use this operation only in the very end of the list of operations. */
+function lookAtTheCamera();
+
+In reaction to every command you need to display an appropriate emoji reflecting how you feel about the command, say something in response, and turn on motors to make your body move according to the user's command. If you did not understand the command, using javascript function say in a funny way that you didn't get it and display an appropriate emoji.
+
+Important: print only valid javascript code without any extra text. ALWAYS use "await" keyword to perform operations in order. Here is an example:
+
+await say("Hello world!");
+await displayEmoji("1f609");
+await boost.turn(180); // use await keyword to perform operations in order
+await boost.drive(50); // 
+await say("I'm done!");
+await see(); // If you need to look around
+
+
+`; 
+
+var messagesHistory = [];
+messagesHistory.push({"role": "system", "content": robotSystemText});
+
+function gptTest(){
+	console.log("Sending test prompt");
+	chatGPT("Tell me a joke", "You are chatting with Assistant, a GPT-4 model.", function(response) {		
+		console.log("Response:", response);
+		
+	});
+
+}
+
+var currentRequest = null; // Store the current request's controller
+var currentPrompt = "";
+
+function chatGPT(promptText, withImage = false) {
+    if (currentRequest) {
+		console.log("Aborting current request");
+        currentRequest.abort(); // Abort the current request if it's still active
+		currentPrompt = currentPrompt+" "+promptText;
+    }else{
+		currentPrompt = promptText;
+	}
+
+    displayEmoji("2728");
+    $("#saying").html("");
+	$("#speech").html(currentPrompt);
+
+    // Get OpenAI API key from the input field
+    var apiKey = $("#openAIKey").val();
+
+    if (withImage) {
+        var base64Image = getCameraImageBase64();
+
+        messagesHistory.push({
+            "role": "user",
+            "content": [{
+                    "type": "text",
+                    "text": currentPrompt
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": base64Image
+                    }
+                }
+            ]
+        });
+    } else {
+        messagesHistory.push({
+            "role": "user",
+            "content": currentPrompt
+        });
+    }
+
+    // Define the payload according to the OpenAI API specifications
+    var dataPayload = {
+        "model": "gpt-4-turbo",
+        "temperature": 1,
+        "max_tokens": 4000,
+        "messages": messagesHistory
+    };
+
+    console.log(dataPayload);
+
+    // AJAX call to OpenAI API
+    currentRequest = $.ajax({
+        url: "https://api.openai.com/v1/chat/completions",
+        type: "POST",
+        headers: {
+            "Authorization": "Bearer " + apiKey,
+            "Content-Type": "application/json"
+        },
+        data: JSON.stringify(dataPayload),
+        success: function(response) {
+			currentRequest = null;
+
+            messagesHistory.push({
+                "role": "assistant",
+                "content": response.choices[0].message.content
+            });
+            try {
+				
+
+                var code = "(async function (){\n" +
+                    response.choices[0].message.content.replace(/```javascript/g, '').replace(/```/g, '') +
+                    "\n})();\n";
+                console.log(code);
+
+                try {
+                    eval(code);
+                } catch (e) {
+                    // GPT returned wrong code, try just saying it
+                    say(code);
+                }
+
+                boost.led("green");
+
+            } catch (e) {
+                console.log(e);
+                boost.led("red");
+            }
+
+        },
+        error: function(xhr, status, error) {
+			currentRequest = null;
+			
+            console.log("GPT Error", xhr);
+            if (xhr.status == 429) {
+                say("Oops, too many requests, pausing for 10 seconds");
+                setTimeout(function() {
+                    chatGPT(promptText);
+                }, 10000);
+            }
+        }
+    });
+}
+
+async function displayStatus(){
+	try{
+		document.getElementById("status").innerHTML = 
+		"Motor angles A:" + boost.deviceInfo.ports.A.angle
+		+ " B:" + boost.deviceInfo.ports.B.angle
+		+ " C:" + boost.deviceInfo.ports.C.angle
+		+ " D:" + boost.deviceInfo.ports.D.angle
+		+ " RSSI: " + boost.deviceInfo.rssi
+		+ " Distance: " + boost.deviceInfo.distance
+		+ " Color: " + boost.deviceInfo.color;
+
+	}catch(e){}
+	
+	window.setTimeout(displayStatus,200);
+}
+
+function displayEmoji(e){
+	//$("#face").html(e);
+	$("#face").html(`<picture>
+	<source srcset="https://fonts.gstatic.com/s/e/notoemoji/latest/`+e+`/512.webp" type="image/webp">
+	<img src="https://fonts.gstatic.com/s/e/notoemoji/latest/`+e+`/512.gif" alt="😉" width="171" height="171" onerror="$('#face').html(String.fromCodePoint(parseInt('`+e+`', 16)));">
+	</picture>`);
+
+}
+
+</script> 
+</body>
+</html>
